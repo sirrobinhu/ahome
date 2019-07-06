@@ -4,6 +4,7 @@
 #include <TimeLib.h>
 #include <DS1307RTC.h>
 #include <dht.h>
+#include "C:\Users\viktor\Documents\Projects\SmartHome\arduino\library\ahomePackage.h"
 
 #define BACKLIGHT_PIN 9
 
@@ -26,25 +27,8 @@ int backLight = 250;
 int lastReceivingTime = 0;
 int actualTime = 0;
 dht DHT;
+String myId = "i4o";
 
-enum tool {
-  MASTER = 0,
-  BALCONY = 1,
-};
-
-struct package
-{
-  tool id;
-  unsigned int packageNum = 0;
-  byte light = 0;  
-  byte h = 0;
-  byte m = 0;
-  byte d = 0;
-  byte mo = 0;
-  byte y = 0;
-  char temperature = 0;
-  char  text[10];  
-};
 typedef struct package Package;
 Package data;
 
@@ -120,11 +104,6 @@ void loop()
   int photocellReading = analogRead(PHOTOCELL_PIN);
 
   int bl = map(photocellReading, 0, 1000, 1, 2);
-//  backLight = map(photocellReading, 0, 800, 5, 255);
-//  if (backLight > 255){
-//    backLight = 255;
-//  }
-
   switch (bl) {
     case 1:
       backLight = 150;
@@ -140,9 +119,6 @@ void loop()
       break;
   }
 
-//  Serial.println(bl);
-//  Serial.println(backLight);
-  
   analogWrite(BACKLIGHT_PIN, backLight);
   digitalWrite(D42, HIGH);
   digitalWrite(D39, HIGH);
@@ -162,7 +138,6 @@ void loop()
     lcd.print(tmYearToCalendar(tm.Year));
 
     actualTime = String(tmYearToCalendar(tm.Year) + print2digits(tm.Month) + print2digits(tm.Day) + print2digits(tm.Hour) + print2digits(tm.Minute) + print2digits(tm.Second)).toInt();
-//    Serial.println(actualTime - lastReceivingTime);
     int lTime = actualTime - lastReceivingTime;
     
   } else {
@@ -183,30 +158,17 @@ void loop()
     while (myRadio.available())
     {
       myRadio.read( &data, sizeof(data) );      
-    }
+    }    
+    
+    if(String(data.receiver) == "i4o") {
+      Serial.println ("EQUALS");
+      Serial.print ("sender: ");
+      Serial.println (data.sender);
+      Serial.print ("receiver: ");
+      Serial.println (data.receiver);
+      Serial.print ("value: ");
+      Serial.println (data.value);
 
-    if(data.id == MASTER) {
-      Serial.println (data.id);
-
-      Serial.println (sizeof(data));
-      if(data.h > 0 && data.m > 0 && data.d > 0 && data.mo > 0 && data.y > 0 && data.y < 2055)
-      {
-        
-        setTime(data.h, data.m, 00, data.d, data.mo, data.y);
-        RTC.set(now());
-      }
-
-      lastReceivingTime = String(tmYearToCalendar(tm.Year) + print2digits(tm.Month) + print2digits(tm.Day) + print2digits(tm.Hour) + print2digits(tm.Minute) + print2digits(tm.Second)).toInt();    
-      lcd.setCursor(0,3);
-      lcd.print("Outside temp:  ");
-      //lcd.print(String(round(data.temperature + 1)));
-      lcd.print(String(round(data.temperature)));
-      lcd.print(" C");
-      lcd.print((char)223);
-      Serial.print("light: ");
-      Serial.println(data.light);
-      Serial.print("pnum: ");
-      Serial.println(data.packageNum);
       Serial.print("hour: ");
       Serial.println(data.h);
       Serial.print("minute: ");
@@ -217,10 +179,21 @@ void loop()
       Serial.println(data.mo);
       Serial.print("year: ");
       Serial.println(data.y);
-      Serial.print("temperature: ");
-      Serial.println(data.temperature);      
-      Serial.print("text: ");
-      Serial.println(data.text);      
+      
+      
+        
+        setTime(data.h, data.m, 00, data.d, data.mo, data.y);
+        RTC.set(now());
+      
+
+      lastReceivingTime = String(tmYearToCalendar(tm.Year) + print2digits(tm.Month) + print2digits(tm.Day) + print2digits(tm.Hour) + print2digits(tm.Minute) + print2digits(tm.Second)).toInt();    
+      lcd.setCursor(0,3);
+      lcd.print("Outside temp:  ");
+      //lcd.print(String(round(data.temperature + 1)));
+      lcd.print(data.value);
+      lcd.print(" C");
+      lcd.print((char)223);      
+//     
     }
     
     DHT.read11(DHT_APIN);  
