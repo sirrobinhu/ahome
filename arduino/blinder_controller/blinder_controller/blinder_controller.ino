@@ -1,5 +1,9 @@
 #include <EEPROM.h>
+#include <IRremote.h>
+#include "nRF24L01.h"
+#include "RF24.h" 
 #include "EEPROMAnything.h"
+
 // Define pin connections & motor's steps per revolution
 #define DIRPIN 2
 #define STEPPIN 3
@@ -7,18 +11,33 @@
 #define DOWNBUTTONPIN 6
 #define UPLEDPIN 7
 #define DOWNLEDPIN 8
+#define IRPIN 4
+
+IRrecv irrecv(IRPIN);
+decode_results results;
+RF24 myRadio (9, 10);
+byte addresses[][6] = {"0"}; 
 
 const int stepsPerRevolution = 200;
 bool directionUp = true;
 int motorSpeed = 1000;
-int minSteps = 0;
-int maxSteps = 20;
 int actualSteps = 0;
+
 struct config_t
 {
     int motorSpeed;
     int actualSteps;
+    int minSteps;
+    int maxSteps;
 } configuration;
+
+struct package
+{
+  char id[10]="";
+  unsigned int packageNum = 0;
+  float temperature = 0.0;
+  char  text[100] = "";
+} data;
 
 int stepsAddress = 0;
 
@@ -34,12 +53,48 @@ void setup()
   pinMode(UPBUTTONPIN, INPUT);
   pinMode(DOWNBUTTONPIN, INPUT);
 
+  irrecv.enableIRIn();
+  
   EEPROM_readAnything(0, configuration);
   Serial.print("Speed: ");
   Serial.println(configuration.motorSpeed);
+  if (configuration.motorSpeed <= 0)
+  {
+    configuration.motorSpeed = 1000;
+  }
+
+  if (configuration.maxSteps <= 0)
+  {
+    configuration.maxSteps = 20;
+  }
+  if (configuration.minSteps != 0)
+  {
+    configuration.minSteps = 0;
+  }
+
+  myRadio.begin(); 
+  myRadio.setChannel(115); 
+  myRadio.setPALevel(RF24_PA_MAX);
+  myRadio.setDataRate( RF24_250KBPS ) ; 
+  myRadio.openReadingPipe(1, addresses[0]);
+  myRadio.startListening();
 }
 void loop()
-{ 
+{   
+
+  if ( myRadio.available()) 
+  {
+    while (myRadio.available())
+    {
+      myRadio.read( &data, sizeof(data) );
+    }
+    Serial.println(data.temperature + 1);
+  }
+  
+  if (irrecv.decode(&results)) {
+    Serial.println(results.value);
+    irrecv.resume();
+  }
   
   int upButtonState = digitalRead(UPBUTTONPIN);  
   if(upButtonState == HIGH)
@@ -57,7 +112,7 @@ void loop()
   }  
 }
 void goUp(bool forced){
-  if(configuration.actualSteps >= minSteps || forced) {
+  if(configuration.actualSteps >= configuration.minSteps || forced) {
     configuration.actualSteps--;
     digitalWrite(UPLEDPIN, HIGH);
     digitalWrite(DIRPIN, HIGH);
@@ -66,7 +121,7 @@ void goUp(bool forced){
 }
 
 void goDown(bool forced) {
-  if(configuration.actualSteps <= maxSteps || forced) {
+  if(configuration.actualSteps <= configuration.maxSteps || forced) {
     configuration.actualSteps++;
     digitalWrite(DOWNLEDPIN, HIGH);
     digitalWrite(DIRPIN, LOW);
