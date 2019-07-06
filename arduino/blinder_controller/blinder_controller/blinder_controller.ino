@@ -31,13 +31,26 @@ struct config_t
     int maxSteps;
 } configuration;
 
+enum tool {
+  MASTER = 0,
+  BALCONY = 1,
+};
+
 struct package
 {
-  char id[10]="";
+  tool id;
   unsigned int packageNum = 0;
-  float temperature = 0.0;
-  char  text[100] = "";
-} data;
+  byte light = 0;  
+  byte h = 0;
+  byte m = 0;
+  byte d = 0;
+  byte mo = 0;
+  byte y = 0;
+  char temperature = 0;
+  char  text[10];  
+};
+typedef struct package Package;
+Package data;
 
 int stepsAddress = 0;
 
@@ -79,18 +92,22 @@ void setup()
   myRadio.openReadingPipe(1, addresses[0]);
   myRadio.startListening();
 }
+
 void loop()
 {   
 
   if ( myRadio.available()) 
-  {
+  {    
     while (myRadio.available())
-    {
+    {      
       myRadio.read( &data, sizeof(data) );
+      delay(20);            
+//      Serial.println(data.packageNum);
+//      Serial.println(data.light);
+      Serial.print("Size: ");
+      Serial.println(sizeof(data));
     }
-    Serial.println(data.temperature + 1);
   }
-  
   if (irrecv.decode(&results)) {
     Serial.println(results.value);
     irrecv.resume();
@@ -126,8 +143,7 @@ void goDown(bool forced) {
     digitalWrite(DOWNLEDPIN, HIGH);
     digitalWrite(DIRPIN, LOW);
     go();
-  }  
-}
+  }  }
 
 void go() {
   for(int x = 0; x < stepsPerRevolution; x++)
