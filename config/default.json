@@ -1,0 +1,12 @@
+{
+    "SmartHome": {
+        "webConfig":{
+            "port":3000
+        },
+        "dbConfig": {
+            "host": "localhost",
+            "port": 5984,
+            "dbName": "customers"
+        }
+    }
+}

@@ -6,6 +6,8 @@ const port = new SerialPort('COM5', { baudRate: 9600,  parser: new SerialPort.pa
 const http = require('http');
 const express = require('express');
 const app = express();
+const config = require('config');
+const webConfig = config.get('SmartHome.webConfig');
 
 let bufferData = "";
 let incomingObj = {};
@@ -19,7 +21,7 @@ app.get('/temp', (req, res) => {
   res.send([1, 2, 3]);
 });
 
-app.listen(3000, () => console.log('Listening on port 3000...'));
+app.listen(webConfig.port, () => console.log('Listening on port '.blue, webConfig.port.toString().cyan));
 
 port.on('readable', function () {
   port.read();
