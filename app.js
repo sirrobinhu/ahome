@@ -70,20 +70,29 @@ port.on('data', function (data) {
   }
 });
 
-setInterval(function() {  
-  console.log(`Time ${getDateString()} has been sent `);
-  port.write(`time:${getDateString()}`);
-}, 10000);
+setInterval(function() { 
+  
+  // let cmd = `TM:i4o,${getTimeString()}`;
+  // port.write(cmd);
+
+  // let cmd = `DT:i4o,${getDateString()}`;
+  // port.write(cmd);
+ }, 10000);
 // }, 1000*60*30);
 
 getDateString = function() {
   let dt = new Date();
-  let year = dt.getFullYear().toString();
-  let month = twoDigitString(dt.getMonth());
-  let day = twoDigitString(dt.getDate()+1);
+  let year = dt.getFullYear().toString().slice(2);
+  let month = twoDigitString(dt.getMonth()+1);
+  let day = twoDigitString(dt.getDate());
+  return `${year}${month}${day}`;
+};
+
+getTimeString = function() {
+  let dt = new Date();  
   let hour = twoDigitString(dt.getHours());
   let minutes = twoDigitString(dt.getMinutes());
-  return `${year}${month}${day}${hour}${minutes}`;
+  return `${hour}${minutes}`;
 };
 
 twoDigitString = function (num) {  

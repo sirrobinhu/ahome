@@ -100,7 +100,7 @@ void setup()
 }
 
 void loop()  
-{
+{  
   int photocellReading = analogRead(PHOTOCELL_PIN);
 
   int bl = map(photocellReading, 0, 1000, 1, 2);
@@ -124,6 +124,7 @@ void loop()
   digitalWrite(D39, HIGH);
   tmElements_t tm;
   if (RTC.read(tm)) {
+    setTime(tm.Hour, tm.Minute, 00, tm.Day, tm.Month, tm.Year);
     lcd.setCursor(0,0);
     lcd.print(print2digits(tm.Hour));
     lcd.print(':');
@@ -160,40 +161,45 @@ void loop()
       myRadio.read( &data, sizeof(data) );      
     }    
     
-    if(String(data.receiver) == "i4o") {
-      Serial.println ("EQUALS");
-      Serial.print ("sender: ");
-      Serial.println (data.sender);
-      Serial.print ("receiver: ");
-      Serial.println (data.receiver);
-      Serial.print ("value: ");
-      Serial.println (data.value);
+    if(String(data.receiver) == myId) {
+      if(data.cmd == DT){
+        int y = 2000 + String(data.value).substring(0, 2).toInt();
+        int m = String(data.value).substring(2, 4).toInt();
+        int d = String(data.value).substring(4, 6).toInt();
 
-      Serial.print("hour: ");
-      Serial.println(data.h);
-      Serial.print("minute: ");
-      Serial.println(data.m);
-      Serial.print("day: ");
-      Serial.println(data.d);
-      Serial.print("month: ");
-      Serial.println(data.mo);
-      Serial.print("year: ");
-      Serial.println(data.y);
-      
-      
-        
-        setTime(data.h, data.m, 00, data.d, data.mo, data.y);
+        Serial.println(m);
+
+        setTime(hour(), minute(), 00, d, m, y);
+//        setTime(tm.Hour, tm.Minute, 00, tm.Day, tm.Month, tm.Year);
         RTC.set(now());
-      
+      }
 
+      if(data.cmd == TM){        
+        int h = String(data.value).substring(0, 2).toInt();
+        int m = String(data.value).substring(2, 4).toInt();
+        Serial.println(year());
+
+        setTime(h, m, 00, day(), minute(), year());
+        RTC.set(now());
+      }
+      
+      if(data.cmd == TEMP){
+        Serial.println ("EQUALS");
+        Serial.print ("receiver: ");
+        Serial.println (data.receiver);
+        Serial.print ("value: ");
+        Serial.println (data.value);
+        Serial.print ("command: ");
+        Serial.println (data.cmd);
+
+        lcd.setCursor(0,3);
+        lcd.print("Outside temp:  ");
+        //lcd.print(String(round(data.temperature + 1)));
+        lcd.print(data.value);
+        lcd.print(" C");
+        lcd.print((char)223);      
+      } 
       lastReceivingTime = String(tmYearToCalendar(tm.Year) + print2digits(tm.Month) + print2digits(tm.Day) + print2digits(tm.Hour) + print2digits(tm.Minute) + print2digits(tm.Second)).toInt();    
-      lcd.setCursor(0,3);
-      lcd.print("Outside temp:  ");
-      //lcd.print(String(round(data.temperature + 1)));
-      lcd.print(data.value);
-      lcd.print(" C");
-      lcd.print((char)223);      
-//     
     }
     
     DHT.read11(DHT_APIN);  

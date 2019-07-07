@@ -1,6 +1,8 @@
 enum command {
   LIGHT,
-  TEMP
+  TEMP,
+  TM,
+  DT
 };
 
 char master[] =  "a1h";
@@ -16,5 +18,5 @@ struct package
   byte mo = 0;
   byte y = 0;
   command cmd;
-  char value[10];
+  char value[12];
 };
