@@ -3,9 +3,23 @@ const SerialPort = require('serialport');
 const colors = require('colors');
 // const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
 const port = new SerialPort('COM5', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
+const http = require('http');
+const express = require('express');
+const app = express();
+
 let bufferData = "";
 let incomingObj = {};
 let lastDate = null;
+
+app.get('/', (req, res) => {
+  res.send('Hello world');
+});
+
+app.get('/temp', (req, res) => {
+  res.send([1, 2, 3]);
+});
+
+app.listen(3000, () => console.log('Listening on port 3000...'));
 
 port.on('readable', function () {
   port.read();
@@ -31,30 +45,7 @@ port.on('data', function (data) {
       console.log('Incoming:'.red, incomingObj);
       let sender = incomingObj['sender'];
       if(incomingObj.cmd == command.TEMP) {
-        let temperature = incomingObj['value'];
-
-        let receivers = devices.filter(obj => {
-          return obj.type === 'clock';
-        });
-
-        receivers.forEach(element => {
-          let sendingData = `TEMP:${element.id},${temperature}`
-          port.write(sendingData);
-          console.log('Sent out: '.cyan + sendingData.white);
-        });
-                
-        let date = new Date;
-        let q = `INSERT INTO outside_temperature (device_id, value, date) VALUES ('${sender}', ${temperature}, ${date.getTime()})`;
-        if (lastDate === null || lastDate < date.getTime()) {
-          lastDate = date.getTime() + 10 * 60 * 1000;
-          console.log('Save'.yellow, q);        
-          conn.query(q, (err, rows, meta) => {
-            if (err){ 
-              throw err; 
-              console.log(err);     
-            }
-          });
-        }
+        saveTemp(incomingObj);        
       }
       bufferData = "";
     }
@@ -105,9 +96,36 @@ twoDigitString = function (num) {
 const command = {
   LIGHT: 0,
   TEMP: 1
-}
+};
 
 const devices = [
   {id: 'c5j', type:'temp_sensor', desc:'Temperature sensor on the balcony'},
   {id: 'i4o', type:'clock', desc:'Key holder with clock'},
-]
+];
+
+saveTemp = function(incomingObj) {
+  let temperature = incomingObj['value'];
+
+        let receivers = devices.filter(obj => {
+          return obj.type === 'clock';
+        });
+
+        receivers.forEach(element => {
+          let sendingData = `TEMP:${element.id},${temperature}`
+          port.write(sendingData);
+          console.log('Sent out: '.cyan + sendingData.white);
+        });
+                
+        let date = new Date;
+        let q = `INSERT INTO outside_temperature (device_id, value, date) VALUES ('${sender}', ${temperature}, ${date.getTime()})`;
+        if (lastDate === null || lastDate < date.getTime()) {
+          lastDate = date.getTime() + 10 * 60 * 1000;
+          console.log('Save'.yellow, q);        
+          conn.query(q, (err, rows, meta) => {
+            if (err){ 
+              throw err; 
+              console.log(err);     
+            }
+          });
+        }
+}
