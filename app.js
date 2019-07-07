@@ -1,5 +1,6 @@
 const mariadb = require('mariadb/callback');
 const SerialPort = require('serialport');
+const colors = require('colors');
 // const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
 const port = new SerialPort('COM5', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
 let bufferData = "";
@@ -24,11 +25,10 @@ const conn = mariadb.createConnection({host: '192.168.1.10', user:'pi', password
 port.on('data', function (data) {
   bufferData += data.toString('utf8');  
   if (bufferData.endsWith('\n') && bufferData.length > 1) {    
-    console.log('bufferdata:', bufferData);
+    // console.log('bufferdata:', bufferData);
     try {
       incomingObj = JSON.parse(bufferData);
-      // console.log('Data:', incomingObj);
-      // console.log(getDateString());
+      console.log('Incoming:'.red, incomingObj);
       let sender = incomingObj['sender'];
       if(incomingObj.cmd == command.TEMP) {
         let temperature = incomingObj['value'];
@@ -38,15 +38,16 @@ port.on('data', function (data) {
         });
 
         receivers.forEach(element => {
-          port.write(`TEMP:${element.id},${temperature}`);
+          let sendingData = `TEMP:${element.id},${temperature}`
+          port.write(sendingData);
+          console.log('Sent out: '.cyan + sendingData.white);
         });
-        
-        console.log('sent data');
+                
         let date = new Date;
         let q = `INSERT INTO outside_temperature (device_id, value, date) VALUES ('${sender}', ${temperature}, ${date.getTime()})`;
         if (lastDate === null || lastDate < date.getTime()) {
           lastDate = date.getTime() + 10 * 60 * 1000;
-          console.log(`Save ${q}`);        
+          console.log('Save'.yellow, q);        
           conn.query(q, (err, rows, meta) => {
             if (err){ 
               throw err; 
@@ -58,7 +59,7 @@ port.on('data', function (data) {
       bufferData = "";
     }
     catch(err) {
-      console.log('Error:', err.Message);
+      // console.log('Error:', err.Message);
       bufferData = "";
     }    
 
