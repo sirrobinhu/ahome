@@ -40,56 +40,39 @@ void loop() {
       const char *buf = incomingString.c_str();
       char *command = strtok((char*)buf, ":");    
       char *value= strtok(NULL, "");
-  
+
+      char *receiver = strtok((char*)value, ",");
+      char *ovalue= strtok(NULL, "");
+      myRadio.stopListening();
+      
       if(String(command)== "TEMP") {  
-        myRadio.stopListening();
-        char *receiver = strtok((char*)value, ",");
-        char *ovalue= strtok(NULL, "");
-  
-        outgoingData.cmd = TEMP;
-        strcpy(outgoingData.value, ovalue);             
-        strcpy(outgoingData.receiver, receiver);
-        myRadio.write(&outgoingData, sizeof(outgoingData));      
-        myRadio.startListening();
+        outgoingData.cmd = TEMP;        
       }  
   
       if(String(command) == "DT") {
-        myRadio.stopListening();
-        char *receiver = strtok((char*)value, ",");
-        char *ovalue= strtok(NULL, "");
-  
         outgoingData.cmd = DT;
-        strcpy(outgoingData.value, ovalue);
-        strcpy(outgoingData.receiver, receiver);
-        myRadio.write(&outgoingData, sizeof(outgoingData));      
-        myRadio.startListening();
       }
       
       if(String(command) == "TM") {
-        myRadio.stopListening();
-        char *receiver = strtok((char*)value, ",");
-        char *ovalue= strtok(NULL, "");
-  
         outgoingData.cmd = TM;
-        strcpy(outgoingData.value, ovalue);
-        strcpy(outgoingData.receiver, receiver);
-        myRadio.write(&outgoingData, sizeof(outgoingData));      
-        myRadio.startListening();
       }
 
       if(String(command) == "PULL") {
-        myRadio.stopListening();
-        char *receiver = strtok((char*)value, ",");
-        char *ovalue= strtok(NULL, "");
-  
         outgoingData.cmd = PULL;
-        strcpy(outgoingData.value, ovalue);
-        strcpy(outgoingData.receiver, receiver);
-        myRadio.write(&outgoingData, sizeof(outgoingData));      
-        myRadio.startListening();
       }
-      DynamicJsonDocument myStruct(200);
-      char t[10]="test";
+
+      if(String(command) == "SPEED") {
+        outgoingData.cmd = SPEED;
+      }
+
+      strcpy(outgoingData.value, ovalue);             
+      strcpy(outgoingData.receiver, receiver);
+      myRadio.write(&outgoingData, sizeof(outgoingData));      
+      myRadio.startListening();
+  }
+
+    DynamicJsonDocument myStruct(200);
+    char t[10]="test";
     if ( myRadio.available()) 
     {    
       while (myRadio.available())
@@ -109,5 +92,4 @@ void loop() {
       Serial.println();
       myRadio.startListening();
     }
-  }
 }

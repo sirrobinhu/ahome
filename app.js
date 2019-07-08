@@ -141,7 +141,8 @@ const command = {
   TEMP: 1,
   TM: 2,
   DT: 3,
-  PULL: 4
+  PULL: 4,
+  SPEED: 5
 };
 
 const devices = [

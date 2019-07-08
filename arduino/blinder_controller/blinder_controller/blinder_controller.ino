@@ -112,7 +112,14 @@ void loop()
           if(String(data.value) == "bottom") {
             goBottom(); 
           }
-        }        
+        } 
+        if(data.cmd == SPEED) {
+          configuration.motorSpeed = String(data.value).toInt();
+          Serial.print("Value: ");
+          Serial.println(data.value);
+          Serial.print("Speed: ");
+          Serial.println(configuration.motorSpeed);
+        }       
       }
     }
   }
@@ -180,9 +187,9 @@ void go() {
   for(int x = 0; x < stepsPerRevolution; x++)
   {
     digitalWrite(STEPPIN, directionUp);
-    delayMicroseconds(motorSpeed);
+    delayMicroseconds(configuration.motorSpeed);
     digitalWrite(STEPPIN, LOW);
-    delayMicroseconds(motorSpeed);
+    delayMicroseconds(configuration.motorSpeed);
   }
   Serial.print("Steps: ");
   Serial.println(configuration.actualSteps);

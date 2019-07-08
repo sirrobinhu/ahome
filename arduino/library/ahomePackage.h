@@ -3,7 +3,8 @@ enum command {
   TEMP,
   TM,
   DT,
-  PULL
+  PULL,
+  SPEED
 };
 
 char master[] =  "a1h";
