@@ -3,6 +3,7 @@
 #include "nRF24L01.h"
 #include "RF24.h" 
 #include "EEPROMAnything.h"
+#include "C:\Users\viktor\Documents\Projects\SmartHome\arduino\library\ahomePackage.h"
 
 // Define pin connections & motor's steps per revolution
 #define DIRPIN 2
@@ -17,6 +18,7 @@ IRrecv irrecv(IRPIN);
 decode_results results;
 RF24 myRadio (9, 10);
 byte addresses[][6] = {"0"}; 
+String myId = "j6g";
 
 const int stepsPerRevolution = 200;
 bool directionUp = true;
@@ -31,24 +33,6 @@ struct config_t
     int maxSteps;
 } configuration;
 
-enum tool {
-  MASTER = 0,
-  BALCONY = 1,
-};
-
-struct package
-{
-  tool id;
-  unsigned int packageNum = 0;
-  byte light = 0;  
-  byte h = 0;
-  byte m = 0;
-  byte d = 0;
-  byte mo = 0;
-  byte y = 0;
-  char temperature = 0;
-  char  text[10];  
-};
 typedef struct package Package;
 Package data;
 
@@ -84,6 +68,18 @@ void setup()
   {
     configuration.minSteps = 0;
   }
+  if (configuration.actualSteps < configuration.minSteps)
+  {
+    configuration.actualSteps = configuration.minSteps;
+  }
+
+  if (configuration.actualSteps > configuration.maxSteps)
+  {
+    configuration.actualSteps = configuration.maxSteps;
+  }
+
+  Serial.print("ActualSteps: ");
+  Serial.println(configuration.actualSteps);
 
   myRadio.begin(); 
   myRadio.setChannel(115); 
@@ -94,18 +90,30 @@ void setup()
 }
 
 void loop()
-{   
-
+{
   if ( myRadio.available()) 
   {    
     while (myRadio.available())
     {      
       myRadio.read( &data, sizeof(data) );
-      delay(20);            
-//      Serial.println(data.packageNum);
-//      Serial.println(data.light);
-      Serial.print("Size: ");
-      Serial.println(sizeof(data));
+      delay(20);
+      if(String(data.receiver) == myId) {
+        if(data.cmd == PULL){
+          Serial.println(data.value);
+          if(String(data.value) == "up") {
+            goUp(false); 
+          }
+          if(String(data.value) == "top") {
+            goTop(); 
+          }
+          if(String(data.value) == "down") {
+            goDown(false); 
+          }
+          if(String(data.value) == "bottom") {
+            goBottom(); 
+          }
+        }        
+      }
     }
   }
   if (irrecv.decode(&results)) {
@@ -129,21 +137,44 @@ void loop()
   }  
 }
 void goUp(bool forced){
+  Serial.println("up");
   if(configuration.actualSteps >= configuration.minSteps || forced) {
     configuration.actualSteps--;
     digitalWrite(UPLEDPIN, HIGH);
-    digitalWrite(DIRPIN, HIGH);
+    digitalWrite(DIRPIN, LOW);
     go();
   }
 }
 
-void goDown(bool forced) {
-  if(configuration.actualSteps <= configuration.maxSteps || forced) {
-    configuration.actualSteps++;
+void goTop(){  
+  Serial.println("up");
+  while(configuration.actualSteps >= configuration.minSteps){
+    configuration.actualSteps--;
     digitalWrite(DOWNLEDPIN, HIGH);
     digitalWrite(DIRPIN, LOW);
     go();
-  }  }
+  }  
+}
+
+void goBottom(){
+  Serial.println("down");
+  while(configuration.actualSteps <= configuration.maxSteps){
+    configuration.actualSteps++;
+    digitalWrite(UPLEDPIN, HIGH);
+    digitalWrite(DIRPIN, HIGH);
+    go();
+  }  
+}
+
+void goDown(bool forced) {
+  Serial.println("down");
+  if(configuration.actualSteps <= configuration.maxSteps || forced) {
+    configuration.actualSteps++;
+    digitalWrite(DOWNLEDPIN, HIGH);
+    digitalWrite(DIRPIN, HIGH);
+    go();
+  }  
+}
 
 void go() {
   for(int x = 0; x < stepsPerRevolution; x++)

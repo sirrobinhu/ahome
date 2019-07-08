@@ -8,10 +8,20 @@ const express = require('express');
 const app = express();
 const config = require('config');
 const webConfig = config.get('SmartHome.webConfig');
+const conn = mariadb.createConnection({host: '192.168.1.10', user:'pi', password: '1azIst3n', database: 'home_control'});
+  conn.connect(err => {
+  if (err) {
+      console.log("not connected due to error: " + err);
+  } else {
+      console.log("connected ! connection id is " + conn.threadId);
+  }
+});
 
 let bufferData = "";
 let incomingObj = {};
 let lastDate = null;
+
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.send('Hello world');
@@ -21,20 +31,43 @@ app.get('/temp', (req, res) => {
   res.send([1, 2, 3]);
 });
 
+app.get('/temp/:id', (req, res) => {
+  const device = devices.find(d => d.id === req.params.id);
+  if (!device) res.status(404).send('The device with the given id is missing');
+  res.send(device);
+});
+
+app.get('/temp/:year/:month/:day', (req, res) => {
+  res.send(req.query);
+});
+
+app.post('/device', (req, res) => {
+  const device = {
+    did: req.body.did,
+    name: req.body.name,    
+    description: req.body.description
+  }
+
+  let q = `INSERT INTO devices (did, name, description) VALUES ('${device.did}', '${device.name}', '${device.description}')`;
+  conn.query(q, (err, rows, meta) => {
+    if (err) throw err;    
+  });
+});
+
+app.post('/command', (req, res) => {
+  
+  let cmd = `${req.body.cmd}:${req.body.did},${req.body.value}`;
+  port.write(cmd);  
+  console.log('Sent out: '.cyan + cmd.white);
+  res.send();
+});
+
 app.listen(webConfig.port, () => console.log('Listening on port '.blue, webConfig.port.toString().cyan));
 
 port.on('readable', function () {
   port.read();
-})
-
-const conn = mariadb.createConnection({host: '192.168.1.10', user:'pi', password: '1azIst3n', database: 'home_control'});
-  conn.connect(err => {
-  if (err) {
-      console.log("not connected due to error: " + err);
-  } else {
-      console.log("connected ! connection id is " + conn.threadId);
-  }
 });
+
 
 // Switches the port into "flowing mode"
 
@@ -65,6 +98,9 @@ port.on('data', function (data) {
 });
 
 setInterval(function() { 
+
+  // let cmd = `PULL:j6g,up`;
+  // port.write(cmd);
   
   // let cmd = `TM:i4o,${getTimeString()}`;
   // port.write(cmd);
@@ -73,6 +109,11 @@ setInterval(function() {
   // port.write(cmd);
  }, 10000);
 // }, 1000*60*30);
+
+// cleanup database
+setInterval(function(){
+  
+}, 604800000)
 
 getDateString = function() {
   let dt = new Date();
@@ -97,7 +138,10 @@ twoDigitString = function (num) {
 
 const command = {
   LIGHT: 0,
-  TEMP: 1
+  TEMP: 1,
+  TM: 2,
+  DT: 3,
+  PULL: 4
 };
 
 const devices = [

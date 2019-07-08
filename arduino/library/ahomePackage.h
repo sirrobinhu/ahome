@@ -2,7 +2,8 @@ enum command {
   LIGHT,
   TEMP,
   TM,
-  DT
+  DT,
+  PULL
 };
 
 char master[] =  "a1h";

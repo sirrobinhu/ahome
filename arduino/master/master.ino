@@ -34,67 +34,80 @@ void setup() {
 }
 
 void loop() {
-  while (Serial.available() > 0) { // if any data available
-    String incomingString = Serial.readString();    
-    Serial.println(incomingString);
-    const char *buf = incomingString.c_str();
-    char *command = strtok((char*)buf, ":");    
-    char *value= strtok(NULL, "");
-
-    if(String(command)== "TEMP") {  
-      myRadio.stopListening();
-      char *receiver = strtok((char*)value, ",");
-      char *ovalue= strtok(NULL, "");
-
-      outgoingData.cmd = TEMP;
-      strcpy(outgoingData.value, ovalue);             
-      strcpy(outgoingData.receiver, receiver);
-      myRadio.write(&outgoingData, sizeof(outgoingData));      
-      myRadio.startListening();
-    }  
-
-    if(String(command) == "DT") {
-      myRadio.stopListening();
-      char *receiver = strtok((char*)value, ",");
-      char *ovalue= strtok(NULL, "");
-
-      outgoingData.cmd = DT;
-      strcpy(outgoingData.value, ovalue);
-      strcpy(outgoingData.receiver, receiver);
-      myRadio.write(&outgoingData, sizeof(outgoingData));      
-      myRadio.startListening();
-    }
-    
-    if(String(command) == "TM") {
-      myRadio.stopListening();
-      char *receiver = strtok((char*)value, ",");
-      char *ovalue= strtok(NULL, "");
-
-      outgoingData.cmd = TM;
-      strcpy(outgoingData.value, ovalue);
-      strcpy(outgoingData.receiver, receiver);
-      myRadio.write(&outgoingData, sizeof(outgoingData));      
-      myRadio.startListening();
+    while (Serial.available() > 0) { // if any data available
+      String incomingString = Serial.readString();    
+      Serial.println(incomingString);
+      const char *buf = incomingString.c_str();
+      char *command = strtok((char*)buf, ":");    
+      char *value= strtok(NULL, "");
+  
+      if(String(command)== "TEMP") {  
+        myRadio.stopListening();
+        char *receiver = strtok((char*)value, ",");
+        char *ovalue= strtok(NULL, "");
+  
+        outgoingData.cmd = TEMP;
+        strcpy(outgoingData.value, ovalue);             
+        strcpy(outgoingData.receiver, receiver);
+        myRadio.write(&outgoingData, sizeof(outgoingData));      
+        myRadio.startListening();
+      }  
+  
+      if(String(command) == "DT") {
+        myRadio.stopListening();
+        char *receiver = strtok((char*)value, ",");
+        char *ovalue= strtok(NULL, "");
+  
+        outgoingData.cmd = DT;
+        strcpy(outgoingData.value, ovalue);
+        strcpy(outgoingData.receiver, receiver);
+        myRadio.write(&outgoingData, sizeof(outgoingData));      
+        myRadio.startListening();
+      }
       
-  DynamicJsonDocument myStruct(200);
-  char t[10]="test";
-  if ( myRadio.available()) 
-  {    
-    while (myRadio.available())
-    {
-      digitalWrite(LED, HIGH);
-      myRadio.read( &incomingData, sizeof(incomingData) );
-      delay(20);      
-      digitalWrite(LED, LOW);      
-    }
-    myRadio.stopListening();
+      if(String(command) == "TM") {
+        myRadio.stopListening();
+        char *receiver = strtok((char*)value, ",");
+        char *ovalue= strtok(NULL, "");
+  
+        outgoingData.cmd = TM;
+        strcpy(outgoingData.value, ovalue);
+        strcpy(outgoingData.receiver, receiver);
+        myRadio.write(&outgoingData, sizeof(outgoingData));      
+        myRadio.startListening();
+      }
 
-    myStruct["cmd"] = String(incomingData.cmd);
-    myStruct["sender"] = incomingData.sender;
-    myStruct["value"] = incomingData.value;
-       
-    serializeJson(myStruct, Serial);
-    Serial.println();
-    myRadio.startListening();
+      if(String(command) == "PULL") {
+        myRadio.stopListening();
+        char *receiver = strtok((char*)value, ",");
+        char *ovalue= strtok(NULL, "");
+  
+        outgoingData.cmd = PULL;
+        strcpy(outgoingData.value, ovalue);
+        strcpy(outgoingData.receiver, receiver);
+        myRadio.write(&outgoingData, sizeof(outgoingData));      
+        myRadio.startListening();
+      }
+      DynamicJsonDocument myStruct(200);
+      char t[10]="test";
+    if ( myRadio.available()) 
+    {    
+      while (myRadio.available())
+      {
+        digitalWrite(LED, HIGH);
+        myRadio.read( &incomingData, sizeof(incomingData) );
+        delay(20);      
+        digitalWrite(LED, LOW);      
+      }
+      myRadio.stopListening();
+  
+      myStruct["cmd"] = String(incomingData.cmd);
+      myStruct["sender"] = incomingData.sender;
+      myStruct["value"] = incomingData.value;
+         
+      serializeJson(myStruct, Serial);
+      Serial.println();
+      myRadio.startListening();
+    }
   }
 }
