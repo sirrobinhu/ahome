@@ -8,7 +8,10 @@ enum command {
   SPEED,
   STATE,
   SMAX,
-  SMIN
+  SMIN,
+  IRUP,
+  IRDWN,
+  IRCNT
 };
 
 char master[] =  "a1h";

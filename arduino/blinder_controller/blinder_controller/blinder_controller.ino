@@ -24,6 +24,8 @@ const int stepsPerRevolution = 200;
 bool directionUp = true;
 int motorSpeed = 1000;
 int actualSteps = 0;
+bool irUp = false;
+int irCounter = 0;
 
 struct config_t
 {
@@ -31,6 +33,9 @@ struct config_t
     int actualSteps;
     int minSteps;
     int maxSteps;
+    double irup;
+    double irdown;
+    double ircont;
 } configuration;
 
 typedef struct package Package;
@@ -79,6 +84,9 @@ void setup()
     configuration.actualSteps = configuration.maxSteps;
   }
 
+//  configuration.irup = 2747854299;
+//  configuration.irdown = 4034314555;
+//  configuration.ircont = 4294967295;
   Serial.print("ActualSteps: ");
   Serial.println(configuration.actualSteps);
 
@@ -137,18 +145,61 @@ void loop()
         if(data.cmd == SMAX) {
           configuration.maxSteps = String(data.value).toInt();
           Serial.print("Value: ");
-          Serial.println(data.value);          
+          Serial.println(data.value);
         }
         if(data.cmd == SMIN) {
           configuration.minSteps = String(data.value).toInt();
           Serial.print("Value: ");
-          Serial.println(data.value);          
+          Serial.println(data.value);
+        }
+        if(data.cmd == IRUP) {
+          configuration.irup = String(data.value).toDouble();
+          Serial.print("Set irup");
+        }
+        if(data.cmd == IRDWN) {
+          configuration.irdown = String(data.value).toDouble();
+          Serial.print("Set irdwn");
+        }
+        if(data.cmd == IRCNT) {
+          configuration.ircont = String(data.value).toDouble();
+          Serial.print("Set ircnt");
         }
       }
     }
   }
   if (irrecv.decode(&results)) {
     Serial.println(results.value);
+    if(results.value == configuration.irup)
+    {
+      irUp = true;   
+      irCounter = 0;   
+    }
+
+    if(results.value == configuration.irdown)
+    {
+      irUp = false;  
+      irCounter = 0;    
+    }
+
+    if(results.value == configuration.ircont)
+    {
+      irCounter++;
+      Serial.println(irCounter);
+      if(irCounter == 3) {
+        if(irUp == true){
+          goTop();
+        }else {
+          goBottom();
+        }
+        irCounter = 0;
+      } else {
+        if(irUp == true){
+          goUp(false);  
+        }else {
+          goDown(false);
+        }
+      }      
+    }
     irrecv.resume();
   }
   
@@ -218,19 +269,12 @@ void go() {
   Serial.print("Steps: ");
   Serial.println(configuration.actualSteps);
   EEPROM_writeAnything(0, configuration);
-  if(configuration.actualSteps == configuration.maxSteps) {
-    
+  if(configuration.actualSteps == configuration.maxSteps || configuration.actualSteps == configuration.minSteps) {
     myRadio.stopListening();   
     delay(50);
-    itoa(configuration.actualSteps, outgoingData.value, 10); 
-    Serial.print("Outgoing ");
-    Serial.print(outgoingData.cmd);
-    Serial.print(" ");
-    Serial.print(outgoingData.sender);
-    Serial.print(" ");
-    Serial.println(outgoingData.value);
+    itoa(configuration.actualSteps, outgoingData.value, 10);     
     myRadio.write(&outgoingData, sizeof(outgoingData)); 
     delay(50);
     myRadio.startListening(); 
-  }
+  }  
 }

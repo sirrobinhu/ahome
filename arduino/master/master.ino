@@ -73,6 +73,18 @@ void loop() {
         outgoingData.cmd = SMIN;
       }
 
+      if(String(command) == "IRUP") {
+        outgoingData.cmd = IRUP;
+      }
+
+      if(String(command) == "IRDWN") {
+        outgoingData.cmd = IRDWN;
+      }
+
+      if(String(command) == "IRCNT") {
+        outgoingData.cmd = IRCNT;
+      }
+
       strcpy(outgoingData.value, ovalue);             
       strcpy(outgoingData.receiver, receiver);
       myRadio.write(&outgoingData, sizeof(outgoingData));      
