@@ -35,6 +35,7 @@ struct config_t
 
 typedef struct package Package;
 Package data;
+Package outgoingData;
 
 int stepsAddress = 0;
 
@@ -81,12 +82,21 @@ void setup()
   Serial.print("ActualSteps: ");
   Serial.println(configuration.actualSteps);
 
+  Serial.print("MaxSteps: ");
+  Serial.println(configuration.maxSteps);
+  Serial.print("MinSteps: ");
+  Serial.println(configuration.minSteps);
+
   myRadio.begin(); 
   myRadio.setChannel(115); 
   myRadio.setPALevel(RF24_PA_MAX);
   myRadio.setDataRate( RF24_250KBPS ) ; 
   myRadio.openReadingPipe(1, addresses[0]);
+  myRadio.openWritingPipe( addresses[0]);
   myRadio.startListening();
+
+  myId.toCharArray(outgoingData.sender, 4);
+  outgoingData.cmd = STATE;
 }
 
 void loop()
@@ -119,7 +129,21 @@ void loop()
           Serial.println(data.value);
           Serial.print("Speed: ");
           Serial.println(configuration.motorSpeed);
-        }       
+        }
+        Serial.print("Value: ");
+        Serial.println(data.value);
+        Serial.print("Command: ");
+        Serial.println(data.cmd);
+        if(data.cmd == SMAX) {
+          configuration.maxSteps = String(data.value).toInt();
+          Serial.print("Value: ");
+          Serial.println(data.value);          
+        }
+        if(data.cmd == SMIN) {
+          configuration.minSteps = String(data.value).toInt();
+          Serial.print("Value: ");
+          Serial.println(data.value);          
+        }
       }
     }
   }
@@ -165,7 +189,7 @@ void goTop(){
 
 void goBottom(){
   Serial.println("down");
-  while(configuration.actualSteps <= configuration.maxSteps){
+  while(configuration.actualSteps < configuration.maxSteps){
     configuration.actualSteps++;
     digitalWrite(UPLEDPIN, HIGH);
     digitalWrite(DIRPIN, HIGH);
@@ -175,7 +199,7 @@ void goBottom(){
 
 void goDown(bool forced) {
   Serial.println("down");
-  if(configuration.actualSteps <= configuration.maxSteps || forced) {
+  if(configuration.actualSteps < configuration.maxSteps || forced) {
     configuration.actualSteps++;
     digitalWrite(DOWNLEDPIN, HIGH);
     digitalWrite(DIRPIN, HIGH);
@@ -194,4 +218,19 @@ void go() {
   Serial.print("Steps: ");
   Serial.println(configuration.actualSteps);
   EEPROM_writeAnything(0, configuration);
+  if(configuration.actualSteps == configuration.maxSteps) {
+    
+    myRadio.stopListening();   
+    delay(50);
+    itoa(configuration.actualSteps, outgoingData.value, 10); 
+    Serial.print("Outgoing ");
+    Serial.print(outgoingData.cmd);
+    Serial.print(" ");
+    Serial.print(outgoingData.sender);
+    Serial.print(" ");
+    Serial.println(outgoingData.value);
+    myRadio.write(&outgoingData, sizeof(outgoingData)); 
+    delay(50);
+    myRadio.startListening(); 
+  }
 }

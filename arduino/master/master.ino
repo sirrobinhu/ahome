@@ -65,6 +65,14 @@ void loop() {
         outgoingData.cmd = SPEED;
       }
 
+      if(String(command) == "SMAX") {
+        outgoingData.cmd = SMAX;
+      }
+
+      if(String(command) == "SMIN") {
+        outgoingData.cmd = SMIN;
+      }
+
       strcpy(outgoingData.value, ovalue);             
       strcpy(outgoingData.receiver, receiver);
       myRadio.write(&outgoingData, sizeof(outgoingData));      

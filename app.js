@@ -1,25 +1,47 @@
 const mariadb = require('mariadb/callback');
 const SerialPort = require('serialport');
 const colors = require('colors');
+const moment = require('moment');
 // const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
-const port = new SerialPort('COM5', { baudRate: 9600,  parser: new SerialPort.parsers.Readline("\n") });
+const port = new SerialPort('COM5', {
+  baudRate: 9600,
+  parser: new SerialPort.parsers.Readline("\n")
+});
 const http = require('http');
 const express = require('express');
 const app = express();
 const config = require('config');
 const webConfig = config.get('SmartHome.webConfig');
-const conn = mariadb.createConnection({host: '192.168.1.10', user:'pi', password: '1azIst3n', database: 'home_control'});
-  conn.connect(err => {
+const conn = mariadb.createConnection({
+  host: '192.168.1.10',
+  user: 'pi',
+  password: '1azIst3n',
+  database: 'home_control'
+});
+conn.connect(err => {
   if (err) {
-      console.log("not connected due to error: " + err);
+    console.log("not connected due to error: " + err);
   } else {
-      console.log("connected ! connection id is " + conn.threadId);
+    console.log("connected ! connection id is " + conn.threadId);
+    getDevices();
   }
 });
 
 let bufferData = "";
 let incomingObj = {};
 let lastDate = null;
+let devices = [];
+getDevices = function () {
+  conn.query("SELECT * FROM devices", (err, rows, meta) => {
+    if (err) throw err;
+    rows.forEach(row => {
+      console.log(row);
+      const device = devices.find(d => d.id === row['id']);
+      if (!device)
+        devices.push(row);
+    });
+  });
+};
 
 app.use(express.json());
 
@@ -44,20 +66,20 @@ app.get('/temp/:year/:month/:day', (req, res) => {
 app.post('/device', (req, res) => {
   const device = {
     did: req.body.did,
-    name: req.body.name,    
+    name: req.body.name,
     description: req.body.description
   }
 
   let q = `INSERT INTO devices (did, name, description) VALUES ('${device.did}', '${device.name}', '${device.description}')`;
   conn.query(q, (err, rows, meta) => {
-    if (err) throw err;    
+    if (err) throw err;
   });
 });
 
 app.post('/command', (req, res) => {
-  
+
   let cmd = `${req.body.cmd}:${req.body.did},${req.body.value}`;
-  port.write(cmd);  
+  port.write(cmd);
   console.log('Sent out: '.cyan + cmd.white);
   res.send();
 });
@@ -72,107 +94,102 @@ port.on('readable', function () {
 // Switches the port into "flowing mode"
 
 port.on('data', function (data) {
-  bufferData += data.toString('utf8');  
-  if (bufferData.endsWith('\n') && bufferData.length > 1) {    
+  bufferData += data.toString('utf8');
+  if (bufferData.endsWith('\n') && bufferData.length > 1) {
     // console.log('bufferdata:', bufferData);
     try {
       incomingObj = JSON.parse(bufferData);
-      console.log('Incoming:'.red, incomingObj);
+      console.log('Incoming:'.magenta, incomingObj);
       let sender = incomingObj['sender'];
-      if(incomingObj.cmd == command.TEMP) {
-        saveTemp(incomingObj);        
-      }
+      // if(incomingObj.cmd == command.TEMP) {
+      saveSensorValue(incomingObj);
+      // }
       bufferData = "";
-    }
-    catch(err) {
+    } catch (err) {
       // console.log('Error:', err.Message);
       bufferData = "";
-    }    
+    }
 
-    conn.query("SELECT * FROM outside_temperature", (err, rows, meta) => {
+    conn.query("SELECT * FROM sensor_values", (err, rows, meta) => {
       if (err) throw err;
-      rows.forEach(row => {
-      });
+      rows.forEach(row => {});
     });
   }
 });
 
-setInterval(function() { 
+setInterval(function () {
+  let date = new Date;
+  
 
   // let cmd = `PULL:j6g,up`;
   // port.write(cmd);
-  
+
   // let cmd = `TM:i4o,${getTimeString()}`;
   // port.write(cmd);
 
   // let cmd = `DT:i4o,${getDateString()}`;
   // port.write(cmd);
- }, 10000);
+
+}, 10000);
 // }, 1000*60*30);
 
 // cleanup database
-setInterval(function(){
-  
+setInterval(function () {
+
 }, 604800000)
 
-getDateString = function() {
+getDateString = function () {
   let dt = new Date();
   let year = dt.getFullYear().toString().slice(2);
-  let month = twoDigitString(dt.getMonth()+1);
+  let month = twoDigitString(dt.getMonth() + 1);
   let day = twoDigitString(dt.getDate());
   return `${year}${month}${day}`;
 };
 
-getTimeString = function() {
-  let dt = new Date();  
+getTimeString = function () {
+  let dt = new Date();
   let hour = twoDigitString(dt.getHours());
   let minutes = twoDigitString(dt.getMinutes());
   return `${hour}${minutes}`;
 };
 
-twoDigitString = function (num) {  
-  if(num > 10)
+twoDigitString = function (num) {
+  if (num > 10)
     return num.toString();
   return `0${num}`;
 };
 
-const command = {
-  LIGHT: 0,
-  TEMP: 1,
-  TM: 2,
-  DT: 3,
-  PULL: 4,
-  SPEED: 5
-};
+saveSensorValue = function (incomingObj) {
+  let sensorValue = incomingObj['value'];
 
-const devices = [
-  {id: 'c5j', type:'temp_sensor', desc:'Temperature sensor on the balcony'},
-  {id: 'i4o', type:'clock', desc:'Key holder with clock'},
-];
+  let receivers = devices.filter(obj => {
+    return obj.type === 7;
+  });
 
-saveTemp = function(incomingObj) {
-  let temperature = incomingObj['value'];
+  receivers.forEach(element => {
+    if (incomingObj.cmd == 1) {
+      let sendingData = `TEMP:${element.id},${sensorValue}`
+      port.write(sendingData);
+      console.log('Sent out: '.cyan + sendingData.white);
+    }
+  });
 
-        let receivers = devices.filter(obj => {
-          return obj.type === 'clock';
-        });
+  let formatteddate = moment().format('YYYY-MM-D HH:mm:ss');
+  let date = new Date;
+  try {
+    let q = `INSERT INTO sensor_values (device_id, value, type, date) VALUES ((SELECT id FROM devices WHERE did = "${incomingObj.sender}"), ${sensorValue}, ${incomingObj.cmd}, '${formatteddate}')`;
 
-        receivers.forEach(element => {
-          let sendingData = `TEMP:${element.id},${temperature}`
-          port.write(sendingData);
-          console.log('Sent out: '.cyan + sendingData.white);
-        });
-                
-        let date = new Date;
-        let q = `INSERT INTO outside_temperature (device_id, value, date) VALUES ('${sender}', ${temperature}, ${date.getTime()})`;
-        if (lastDate === null || lastDate < date.getTime()) {
-          lastDate = date.getTime() + 10 * 60 * 1000;
-          console.log('Save'.yellow, q);        
-          conn.query(q, (err, rows, meta) => {
-            if (err){ 
-              throw err; 
-              console.log(err);     
-            }
-          });
+    if (lastDate === null || lastDate < date.getTime()) {
+      lastDate = date.getTime() + 10 * 60 * 1000;
+      console.log('Save'.yellow, q);
+      conn.query(q, (err, rows, meta) => {
+        if (err) {
+          console.log('Couldn\'t save the record: '.red + q.white);
         }
+      });
+    }
+  } catch (error) {
+    console.log('Couldn\'t save the record: '.red + q.white);
+  }
+
 }

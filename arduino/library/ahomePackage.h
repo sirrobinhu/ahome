@@ -1,10 +1,14 @@
+// Same than device_type in the database
 enum command {
   LIGHT,
   TEMP,
   TM,
   DT,
   PULL,
-  SPEED
+  SPEED,
+  STATE,
+  SMAX,
+  SMIN
 };
 
 char master[] =  "a1h";
