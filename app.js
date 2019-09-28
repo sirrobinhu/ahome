@@ -33,7 +33,11 @@ let lastDate = null;
 let devices = [];
 getDevices = function () {
   conn.query("SELECT * FROM devices", (err, rows, meta) => {
-    if (err) throw err;
+    if (err) {
+      // throw err
+      console.log('Can\'t connect to the database'.red);
+      return;
+    };
     rows.forEach(row => {
       console.log(row);
       const device = devices.find(d => d.id === row['id']);
@@ -72,7 +76,10 @@ app.post('/device', (req, res) => {
 
   let q = `INSERT INTO devices (did, name, description) VALUES ('${device.did}', '${device.name}', '${device.description}')`;
   conn.query(q, (err, rows, meta) => {
-    if (err) throw err;
+    if (err) {
+      console.log('Can\'t connect to the database'.red);
+      return;
+    };
   });
 });
 
@@ -90,29 +97,28 @@ port.on('readable', function () {
   port.read();
 });
 
-
-// Switches the port into "flowing mode"
-
 port.on('data', function (data) {
   bufferData += data.toString('utf8');
   if (bufferData.endsWith('\n') && bufferData.length > 1) {
-    // console.log('bufferdata:', bufferData);
     try {
       incomingObj = JSON.parse(bufferData);
       console.log('Incoming:'.magenta, incomingObj);
       let sender = incomingObj['sender'];
-      // if(incomingObj.cmd == command.TEMP) {
       saveSensorValue(incomingObj);
-      // }
       bufferData = "";
     } catch (err) {
-      // console.log('Error:', err.Message);
       bufferData = "";
     }
 
     conn.query("SELECT * FROM sensor_values", (err, rows, meta) => {
-      if (err) throw err;
-      rows.forEach(row => {});
+      if (err) {
+        // throw err
+        console.log('Can\'t connect to the database'.red);
+        return;
+      } else
+      {
+        rows.forEach(row => {});
+      }      
     });
   }
 });
@@ -120,12 +126,14 @@ port.on('data', function (data) {
 setInterval(function () {
   let date = new Date;
   
+  // let cmd = `TEMP:i4o,45`;
+  // port.write(cmd);
 
   // let cmd = `PULL:j6g,up`;
   // port.write(cmd);
 
-  // let cmd = `TM:i4o,${getTimeString()}`;
-  // port.write(cmd);
+  let cmd = `TM:i4o,${getTimeString()}`;
+  port.write(cmd);
 
   // let cmd = `DT:i4o,${getDateString()}`;
   // port.write(cmd);
@@ -168,7 +176,7 @@ saveSensorValue = function (incomingObj) {
 
   receivers.forEach(element => {
     if (incomingObj.cmd == 1) {
-      let sendingData = `TEMP:${element.id},${sensorValue}`
+      let sendingData = `TEMP:${element.did},${sensorValue}`
       port.write(sendingData);
       console.log('Sent out: '.cyan + sendingData.white);
     }
@@ -184,7 +192,8 @@ saveSensorValue = function (incomingObj) {
       console.log('Save'.yellow, q);
       conn.query(q, (err, rows, meta) => {
         if (err) {
-          console.log('Couldn\'t save the record: '.red + q.white);
+          console.log('Couldn\'t save the record: '.red + q.white);          
+          return;
         }
       });
     }

@@ -195,8 +195,12 @@ void loop()
       } else {
         if(irUp == true){
           goUp(false);  
+          digitalWrite(UPLEDPIN, HIGH);
+          digitalWrite(DOWNLEDPIN, LOW);
         }else {
           goDown(false);
+          digitalWrite(UPLEDPIN, LOW);
+          digitalWrite(DOWNLEDPIN, HIGH);
         }
       }      
     }
@@ -223,7 +227,7 @@ void goUp(bool forced){
   if(configuration.actualSteps >= configuration.minSteps || forced) {
     configuration.actualSteps--;
     digitalWrite(UPLEDPIN, HIGH);
-    digitalWrite(DIRPIN, LOW);
+    digitalWrite(DIRPIN, HIGH);
     go();
   }
 }
@@ -233,7 +237,7 @@ void goTop(){
   while(configuration.actualSteps >= configuration.minSteps){
     configuration.actualSteps--;
     digitalWrite(DOWNLEDPIN, HIGH);
-    digitalWrite(DIRPIN, LOW);
+    digitalWrite(DIRPIN, HIGH);
     go();
   }  
 }
@@ -243,7 +247,7 @@ void goBottom(){
   while(configuration.actualSteps < configuration.maxSteps){
     configuration.actualSteps++;
     digitalWrite(UPLEDPIN, HIGH);
-    digitalWrite(DIRPIN, HIGH);
+    digitalWrite(DIRPIN, LOW);
     go();
   }  
 }
@@ -253,7 +257,7 @@ void goDown(bool forced) {
   if(configuration.actualSteps < configuration.maxSteps || forced) {
     configuration.actualSteps++;
     digitalWrite(DOWNLEDPIN, HIGH);
-    digitalWrite(DIRPIN, HIGH);
+    digitalWrite(DIRPIN, LOW);
     go();
   }  
 }
@@ -273,7 +277,7 @@ void go() {
     myRadio.stopListening();   
     delay(50);
     itoa(configuration.actualSteps, outgoingData.value, 10);     
-    myRadio.write(&outgoingData, sizeof(outgoingData)); 
+//    myRadio.write(&outgoingData, sizeof(outgoingData)); 
     delay(50);
     myRadio.startListening(); 
   }  
