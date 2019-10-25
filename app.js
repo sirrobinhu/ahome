@@ -16,7 +16,8 @@ const conn = mariadb.createConnection({
   host: '192.168.1.10',
   user: 'pi',
   password: '1azIst3n',
-  database: 'home_control'
+  database: 'home_control',
+  connectTimeout: 10000
 });
 conn.connect(err => {
   if (err) {
@@ -34,7 +35,6 @@ let devices = [];
 getDevices = function () {
   conn.query("SELECT * FROM devices", (err, rows, meta) => {
     if (err) {
-      // throw err
       console.log('Can\'t connect to the database'.red);
       return;
     };
@@ -102,49 +102,63 @@ port.on('data', function (data) {
   if (bufferData.endsWith('\n') && bufferData.length > 1) {
     try {
       incomingObj = JSON.parse(bufferData);
-      console.log('Incoming:'.magenta, incomingObj);
+      // console.log('Incoming:'.magenta, incomingObj);
       let sender = incomingObj['sender'];
       saveSensorValue(incomingObj);
       bufferData = "";
     } catch (err) {
       bufferData = "";
     }
-
-    conn.query("SELECT * FROM sensor_values", (err, rows, meta) => {
-      if (err) {
-        // throw err
-        console.log('Can\'t connect to the database'.red);
-        return;
-      } else
-      {
-        rows.forEach(row => {});
-      }      
-    });
   }
 });
 
+//Set time once in a day
+setInterval(function () {  
+  let receivers = devices.filter(obj => {
+    return obj.type === 7;
+  });
+  receivers.forEach(function (element) {
+    let cmd = `TM:${element.did},${getTimeString()}`;
+    port.write(cmd);
+    console.log('Time sent to: ' + element.did);
+
+    cmd = `DT:${element.did},${getDateString()}`;
+    port.write(cmd);
+    console.log('Date sent to: ' + element.did);
+  });
+}, 3.6e+6);
+
+//Send out temperature to clocks
 setInterval(function () {
-  let date = new Date;
+  let receivers = devices.filter(obj => {
+    return obj.type === 7;
+  });
+  // console.log(receivers);
+  conn.query("SELECT * FROM sensor_values WHERE TYPE = 1 ORDER BY date DESC LIMIT 1", (err, rows, meta) => {
+    if (err) {
+      console.log('Can\'t connect to the database'.red);
+      return;
+    };
+    let f = new Date();
+    f.addHours(1);
+
+    rows.forEach(function(row) {
+      var r = row;
+      var sendingData;
+      if (f > row.data) {
+        sendingData = `TEMP:${element.did},--`
+      } else {        
+        receivers.forEach(function (element) {    
+          sendingData = `TEMP:${element.did},${r.value}`                    
+        });        
+      }
+      port.write(sendingData);
+      console.log('Sent out: '.cyan + sendingData.white);
+    });
+  });
   
-  // let cmd = `TEMP:i4o,45`;
-  // port.write(cmd);
-
-  // let cmd = `PULL:j6g,up`;
-  // port.write(cmd);
-
-  let cmd = `TM:i4o,${getTimeString()}`;
-  port.write(cmd);
-
-  // let cmd = `DT:i4o,${getDateString()}`;
-  // port.write(cmd);
-
-}, 10000);
-// }, 1000*60*30);
-
-// cleanup database
-setInterval(function () {
-
-}, 604800000)
+ 
+}, 600000);
 
 getDateString = function () {
   let dt = new Date();
@@ -170,18 +184,6 @@ twoDigitString = function (num) {
 saveSensorValue = function (incomingObj) {
   let sensorValue = incomingObj['value'];
 
-  let receivers = devices.filter(obj => {
-    return obj.type === 7;
-  });
-
-  receivers.forEach(element => {
-    if (incomingObj.cmd == 1) {
-      let sendingData = `TEMP:${element.did},${sensorValue}`
-      port.write(sendingData);
-      console.log('Sent out: '.cyan + sendingData.white);
-    }
-  });
-
   let formatteddate = moment().format('YYYY-MM-D HH:mm:ss');
   let date = new Date;
   try {
@@ -200,5 +202,9 @@ saveSensorValue = function (incomingObj) {
   } catch (error) {
     console.log('Couldn\'t save the record: '.red + q.white);
   }
+}
 
+Date.prototype.addHours= function(h){
+  this.setHours(this.getHours()+h);
+  return this;
 }
